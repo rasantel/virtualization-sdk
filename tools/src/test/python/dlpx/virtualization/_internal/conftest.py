@@ -520,7 +520,7 @@ def source_config_definition():
 def virtual_source_definition():
     return {
         'type': 'object',
-        'additionalProperties': True,
+        'additionalProperties': False,
         'properties': {
             'path': {
                 'type': 'string'
@@ -538,7 +538,7 @@ def linked_source_definition():
 def linked_source_definition_with_refs():
     return {
         'type': 'object',
-        'additionalProperties': True,
+        'additionalProperties': False,
         'properties': {
             'path': {
                 'type': 'string'
@@ -568,7 +568,7 @@ def linked_source_definition_with_refs():
 def linked_source_definition_with_opaque_refs():
     return {
         'type': 'object',
-        'additionalProperties': True,
+        'additionalProperties': False,
         'properties': {
             'path': {
                 'type': 'string'

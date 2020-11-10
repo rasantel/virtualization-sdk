@@ -85,3 +85,37 @@ class IncorrectArgumentTypeError(PluginRuntimeError):
             expected,
             (' if defined', '')[required]))
         super(IncorrectArgumentTypeError, self).__init__(message)
+
+
+class IncorrectArgumentValueError(PluginRuntimeError):
+    """IncorrectArgumentValueError is thrown when a library function gets
+    called with an argument that has an incorrect value.
+
+    Args:
+        func (function): The library function being called
+        parameter_name (str): The name of the param being passed in
+        actual value (object or None): value that was actually passed in
+            for the parameter
+        expected_values (List[object]): The possible values that the parameter can take.
+        required (bool): If the parameter is required (doesn't have a default)
+
+    Attributes:
+        message (str): A user-readable message describing the exception.
+    """
+
+    def __init__(
+        self,
+        parameter_name,
+        actual_value,
+        expected_values,
+        required=True):
+        # Get the name of the function that is throwning this error.
+        func_name = sys._getframe(1).f_code.co_name
+        message = ("The function {}'s argument '{}' was {} but should"
+                   " be one of {}{}.".format(
+            func_name,
+            parameter_name,
+            actual_value,
+            expected_values,
+            (' if defined', '')[required]))
+        super(IncorrectArgumentTypeError, self).__init__(message)
