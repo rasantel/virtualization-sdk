@@ -34,6 +34,8 @@ from dlpx.virtualization.common._common_classes import (RemoteConnection,
                                                         PasswordCredentials,
                                                         KeyPairCredentials)
 from google.protobuf.struct_pb2 import Struct
+# from google.protobuf import json_format
+from dlpx.virtualization.libs import json_format_patched
 
 import logging
 
@@ -43,7 +45,8 @@ __all__ = [
     "run_sync",
     "run_powershell",
     "run_expect",
-    "retrieve_credentials"
+    "retrieve_credentials",
+    "upgrade_password"
 ]
 
 
@@ -446,3 +449,38 @@ def retrieve_credentials(credentials_supplier):
         credentials_result.username,
         credentials_result.key_pair.private_key,
         credentials_result.key_pair.public_key)
+
+
+def upgrade_password(password, username=None, expected_secret_type=PasswordCredentials):
+    """This is an internal wrapper around Virtualization's credentials-supplier conversion  API.
+    It is intended for use during plugin upgrade when a plugin needs to transform a password
+    value into a more generic credentials supplier object.
+
+    Args:
+        password (basestring): Plain password string.
+        username (basestring, defaults to None): User name contained in the password credential supplier to return.
+        expected_secret_type (PasswordCredentials or None, defaults to PasswordCredentials): Expected secret type
+         to supply.
+    Return:
+        Credentials supplier (dict) that supplies the given password and username.
+    """
+    from dlpx.virtualization._engine import libs as internal_libs
+
+    # if not isinstance(password, basestring):
+    #     raise IncorrectArgumentTypeError('password', type(password), basestring)
+    # if username and not isinstance(username, basestring):
+    #     raise IncorrectArgumentTypeError('username', type(username), basestring, required=False)
+    # expected_secret_type_values = [None, PasswordCredentials]
+    # if expected_secret_type not in expected_secret_type_values:
+    #     raise IncorrectArgumentValueError('expected_secret_type', expected_secret_type, expected_secret_type_values)
+
+    upgrade_password_request = libs_pb2.UpgradePasswordRequest()
+    upgrade_password_request.password = password
+    upgrade_password_request.username = username
+    if expected_secret_type:
+        upgrade_password_request.expected_secret_type = 'password'
+
+    response = internal_libs.upgrade_password(upgrade_password_request)
+
+    upgrade_password_result = _handle_response(response)
+    return json_format_patched.MessageToDict(upgrade_password_result.credentials_supplier)
