@@ -10,6 +10,7 @@ from dlpx.virtualization import libs
 from dlpx.virtualization.libs.exceptions import (
     IncorrectArgumentTypeError, LibraryError, PluginScriptError)
 from google.protobuf import json_format
+from google.protobuf.struct_pb2 import Struct
 
 
 class TestLibsRunBash:
@@ -862,3 +863,24 @@ class TestLibsRetrieveCredentials:
         assert err_info.value.message == (
             "The function retrieve_credentials's argument 'credentials_supplier' was"
             " type 'int' but should be of type 'dict'.")
+
+
+class TestLibsUpgradePassword:
+    @staticmethod
+    def test_upgrade_password():
+        expected_credentials_supplier = {'some supplier property': 'some supplier value'}
+        expected_upgrade_password_response = libs_pb2.UpgradePasswordResponse()
+        expected_upgrade_password_response.return_value.credentials_supplier.update(expected_credentials_supplier)
+
+        expected_password = 'some password'
+
+        def mock_upgrade_password(actual_upgrade_password_request):
+            assert actual_upgrade_password_request.password == expected_password
+
+            return expected_upgrade_password_response
+
+        with mock.patch('dlpx.virtualization._engine.libs.upgrade_password',
+                        side_effect=mock_upgrade_password, create=True):
+            actual_upgrade_password_result = libs.upgrade_password(expected_password)
+
+        assert actual_upgrade_password_result == expected_credentials_supplier

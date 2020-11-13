@@ -476,9 +476,10 @@ def upgrade_password(password, username=None, expected_secret_type=PasswordCrede
 
     upgrade_password_request = libs_pb2.UpgradePasswordRequest()
     upgrade_password_request.password = password
-    upgrade_password_request.username = username
+    if username:
+        upgrade_password_request.username = username
     if expected_secret_type:
-        upgrade_password_request.expected_secret_type = 'password'
+        upgrade_password_request.expected_secret_type = libs_pb2.UpgradePasswordRequest.PASSWORD
 
     response = internal_libs.upgrade_password(upgrade_password_request)
 
