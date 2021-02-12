@@ -373,6 +373,202 @@ The `matches` keyword is used to map an [environment user](/References/Glossary.
 
 In the example above, environment user `envUser` maps to environment `env`.
 
+### Delphix-specific Predefined Types
+
+Plugins can also take advantage of predefined object types offered by Delphix. Currently, these object types let users supply credentials to plugins directly or via password vaults. These type definitions can be referenced by JSON schemas via the external schema identifier `https://delphix.com/platform/api`.
+
+The list below describes each of these definitions and shows how they can be used by plugins and users.
+
+#### `credentialsSupplier`
+
+Defines an object type that lets users supply credentials consisting of a username (optional) and a secret. The secret can be a password, a private key, or a public-private key pair. An example of a JSON schema using this type is:
+
+```json
+"properties": {
+  "myCredentials": {
+    "$ref": "https://delphix.com/platform/api#/definitions/credentialsSupplier"
+  }
+}
+```
+where `credentialsSupplier` is a definition in the external schema `https://delphix.com/platform/api`.  
+
+When providing data for a property of this type, the user has the following four options.
+
+##### Username and password
+
+For this option, the user must provide data that satisfies this definition:
+```json
+{
+  "type": "object",
+  "required": ["type", "password"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "NamedPasswordCredential"
+    },
+    "username": {
+      "type": "string"
+    },
+    "password": {
+      "type": "string",
+      "format": "password"
+    }
+  }
+}
+```
+
+For example, the user can provide:
+```json
+"properties": {
+  "myCredentials": {
+    "type": "NamedPasswordCredential",
+    "username": "my user name",
+    "password": "my password"
+  }
+}
+```
+
+##### Username and key(s)
+
+For this option, the user must provide data that satisfies this definition:
+```json
+{
+  "type": "object",
+  "required": ["type", "privateKey"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "NamedKeyPairCredential"
+    },
+    "username": {
+      "type": "string"
+    },
+    "publicKey": {
+      "type": "string"
+    },
+    "privateKey": {
+      "type": "string",
+      "format": "password"
+    }
+  }
+}
+```
+
+For example, the user can provide:
+```json
+"properties": {
+  "myCredentials": {
+    "type": "NamedKeyPairCredential",
+    "username": "my user name",
+    "publicKey": "AAA4QG...HBCDD3=",
+    "privateKey": "-----BEGIN RSA PRIVATE KEY-----...-----END RSA PRIVATE KEY-----"
+  }
+}
+```
+
+##### CyberArk vault credentials
+
+For this option, the user must provide data that satisfies this definition:
+```json
+{
+  "type": "object",
+  "required": ["type", "vault", "queryString"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "CyberArkVaultCredential"
+    },
+    "vault": {
+      "type": "string",
+      "format": "reference",
+      "referenceType": "CyberArkPasswordVault"
+    },
+    "queryString": {
+      "type": "string"
+    },
+    "expectedSecretType": {
+      "type": "string",
+      "enum": ["any", "password", "keyPair"],
+      "default": "any"
+    }
+  }
+}
+```
+where `vault` is a reference to a CyberArk vault configured in the system and `queryString` is a parameter for locating the credentials in the vault. For details on configuring and using CyberArk vaults, see <https://docs.delphix.com/docs/security/product-security/password-vault-support/>.
+
+Optionally, `expectedSecretType` lets the user constrain the secret returned by the vault to passwords or keys (the default is to allow `any` of those two types of secret).
+
+For example, the user can provide:
+```json
+"properties": {
+  "myCredentials": {
+    "type": "CyberArkVaultCredential",
+    "vault": "CYBERARK_PASSWORD_VAULT-1",
+    "queryString": "Safe=test;Object=myObject"
+  }
+}
+```
+
+##### HashiCorp vault credentials
+
+For this option, the user must provide data that satisfies this definition:
+```json
+{
+  "type": "object",
+  "required": ["type", "vault", "engine", "path", "usernameKey", "secretKey"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "HashiCorpVaultCredential"
+    },
+    "vault": {
+      "type": "string",
+      "format": "reference",
+      "referenceType": "HashiCorpVault"
+    },
+    "engine": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "usernameKey": {
+      "type": "string"
+    },
+    "secretKey": {
+      "type": "string"
+    },
+    "expectedSecretType": {
+      "type": "string",
+      "enum": ["any", "password", "keyPair"],
+      "default": "any"
+    }
+  }
+}
+```
+where `vault` is a reference to a HashiCorp vault configured in the system and `engine`, `path`, `usernameKey` and `secretKey` are parameters for locating the credentials in the vault. For details on configuring and using HashiCorp vaults, see <https://docs.delphix.com/docs/security/product-security/password-vault-support/>.
+
+Optionally, `expectedSecretType` lets the user constrain the secret returned by the vault to passwords or keys (the default is to allow `any` of those two types of secret).
+
+For example, the user can provide:
+```json
+"properties": {
+  "myCredentials": {
+    "type": "HashiCorpVaultCredential",
+    "vault": "HASHICORP_VAULT-2",
+    "engine": "kv-v2",
+  }
+}
+```
+
+#### `keyCredentialsSupplier`
+
+This object type is identical to `credentialsSupplier` but requires the secrets to be keys. The available options are [keys](#username-and-keys), [CyberArk vaults](#cyberark-vault-credentials) and [HashiCorp vaults](#hashicorp-vault-credentials). The property `expectedSecretType` is required in all cases and must have the value `keyPair`.
+
+#### `passwordCredentialsSupplier`
+
+This object type is identical to `credentialsSupplier` but requires the secrets to be passwords. The available options are [passwords](#username-and-password), [CyberArk vaults](#cyberark-vault-credentials) and [HashiCorp vaults](#hashicorp-vault-credentials). The property `expectedSecretType` is required in all cases and must have the value `keyPair`.
+
 ## JSON Schema Limitations
 
 To be able to autogenerate Python classes there are some restrictions to the JSON Schemas that are supported.

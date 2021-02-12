@@ -37,6 +37,47 @@ This tells the Delphix Engine to take special precautions with this password pro
 !!! note
     Removing a previously added password property from a field and running a [Data Migration](/References/Glossary.md#data-migration) will expose the password in plaintext. If this is intentional, write a migration to ensure that the new property conforms to the new schema.
 
+# Protecting Sensitive Data with Password Vaults
+
+Plugins can leverage the password vaults configured in the Delphix engine to avoid storing sensitive data in the engine and allow seamless rotation of secrets behind the scenes. To give users the option to choose between providing a password or private key directly or retrieving it from a vault, Delphix provides [predefined credential types](/References/Schemas.md#delphix-specific-predefined-types).
+
+When using these special types, the example above becomes:
+
+```json
+{
+    "type": "object",
+    "properties": {
+        "db_connectionPort": {"type": "string"},
+        "db_credentials_supplier": {
+          "$ref": "https://delphix.com/platform/api#/definitions/passwordCredentialsSupplier"
+        }
+    }
+}
+```
+
+For details on how the user can provide the information required for a property such as `db_credentials_supplier`, see the [section on predefined types](/References/Schemas.md#delphix-specific-predefined-types).
+
+At runtime, the plugin code must convert the credentials information provided by the user into an actual set of credentials that the plugin can use. To do this, the plugin must call the library function [`retrieve_credentials`](/References/Platform_Libraries.md#retrieve_credentials). For example:
+
+```python
+from dlpx.virtualization import libs
+from dlpx.virtualization.common import PasswordCredentials
+from dlpx.virtualization.platform import Plugin
+
+plugin = Plugin()
+
+@plugin.virtual.stop()
+def my_virtual_stop(virtual_source, repository, source_config):
+  credentials = libs.retrieve_credentials(virtual_source.parameters.db_credentials_supplier)
+  assert isinstance(credentials, PasswordCredentials)
+  environment_vars = {
+      "DATABASE_USERNAME" : credentials.username,
+      "DATABASE_PASSWORD" : credentials.password
+  }
+  ...
+```
+
+
 # Using Environment Variables For Remote Data Passing
 
 Sometimes, a plugin will need to pass sensitive data to a remote environment. For example, perhaps a database command needs to be run on a [staging environment](/References/Glossary.md#staging-environment), and that database command will need to use a password.
